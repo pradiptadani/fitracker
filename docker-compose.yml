@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fitracker
+      POSTGRES_USER: ${POSTGRES_USER:-fitracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fitracker_password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fitracker}:${POSTGRES_PASSWORD:-fitracker_password}@db:5432/fitracker
+    env_file: .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

@@ -1,67 +1,42 @@
-import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import prisma from '@/lib/prisma';
-import type { Account } from '@prisma/client';
-import { getSession } from '@/lib/session';
-import { computeBalance } from '@/lib/balance';
-
-const CreateAccountSchema = z.object({
-  name: z.string().min(1).max(100),
-  type: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']),
-  normal_balance: z.enum(['debit', 'credit']),
-  currency: z.string().default('IDR'),
-});
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import prisma from "@/lib/prisma";
+import { requireApiAuth } from "@/lib/auth";
+import { computeBalance } from "@/lib/balance";
+import { createAccountSchema } from "@/lib/validators";
 
 export async function GET() {
-  const session = await getSession();
-  if (!session.userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const accounts = await prisma.account.findMany({
-    where: { deleted_at: null },
-    orderBy: { name: 'asc' },
-  });
-
-  // Compute balance for each account
+  const unauthorized = await requireApiAuth();
+  if (unauthorized) return unauthorized;
+  const accounts = await prisma.account.findMany({ orderBy: { name: "asc" } });
   const accountsWithBalances = await Promise.all(
-    accounts.map(async (account: Account) => {
+    accounts.map(async (account) => {
       const balance = await computeBalance(account.id);
-      return {
-        ...account,
-        balance: balance.toString(),
-      };
-    })
+      return { ...account, balance: balance.toNumber() };
+    }),
   );
-
-  return NextResponse.json(accountsWithBalances);
+  return NextResponse.json({ data: accountsWithBalances });
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session.userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+  const unauthorized = await requireApiAuth();
+  if (unauthorized) return unauthorized;
   try {
     const body = await request.json();
-    const data = CreateAccountSchema.parse(body);
-
-    const account = await prisma.account.create({
-      data: {
-        name: data.name,
-        type: data.type,
-        normal_balance: data.normal_balance,
-        currency: data.currency,
-      },
-    });
-
-    return NextResponse.json(account, { status: 201 });
+    const data = createAccountSchema.parse(body);
+    const account = await prisma.account.create({ data });
+    return NextResponse.json({ data: account }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ errors: error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: "Validation failed", details: error.issues },
+        { status: 400 },
+      );
     }
-    console.error('Create account error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error(error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

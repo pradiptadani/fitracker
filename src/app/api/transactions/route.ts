@@ -1,48 +1,66 @@
-import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import prisma from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import prisma from "@/lib/prisma";
+import { requireApiAuth } from "@/lib/auth";
+import { createTransactionSchema } from "@/lib/validators";
 
-const CreateTransactionSchema = z.object({
-  account_id: z.string().uuid(),
-  amount: z.number().positive(),
-  currency: z.string().default('IDR'),
-  exchange_rate: z.number().positive().default(1),
-  type: z.enum(['debit', 'credit']),
-  category_id: z.string().uuid().optional(),
-  date: z.string().datetime(),
-  notes: z.string().optional(),
-});
-
-export async function GET() {
-  const session = await getSession();
-  if (!session.userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export async function GET(request: Request) {
+  const unauthorized = await requireApiAuth();
+  if (unauthorized) return unauthorized;
+  const url = new URL(request.url);
+  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "20"), 100);
+  const cursor = url.searchParams.get("cursor") ?? undefined;
+  const accountId = url.searchParams.get("account") ?? undefined;
+  const categoryId = url.searchParams.get("category") ?? undefined;
+  const from = url.searchParams.get("from")
+    ? new Date(url.searchParams.get("from")!)
+    : undefined;
+  const to = url.searchParams.get("to")
+    ? new Date(url.searchParams.get("to")!)
+    : undefined;
+  const search = url.searchParams.get("q") ?? undefined;
+  const transferOnly = url.searchParams.get("transfers") === "true";
 
   const transactions = await prisma.transaction.findMany({
-    where: { deleted_at: null },
-    include: {
-      account: { select: { name: true, type: true } },
-      category: { select: { name: true } },
+    where: {
+      account_id: accountId,
+      category_id: categoryId,
+      date: from || to ? { gte: from, lte: to } : undefined,
+      notes: search ? { contains: search, mode: "insensitive" } : undefined,
+      transfer_group_id: transferOnly ? { not: null } : undefined,
     },
-    orderBy: { date: 'desc' },
-    take: 50,
+    include: {
+      account: { select: { id: true, name: true, type: true } },
+      category: { select: { id: true, name: true, type: true } },
+    },
+    orderBy: { date: "desc" },
+    take: limit + 1,
+    cursor: cursor ? { id: cursor } : undefined,
+    skip: cursor ? 1 : 0,
   });
 
-  return NextResponse.json(transactions);
+  const hasMore = transactions.length > limit;
+  if (hasMore) transactions.pop();
+  const nextCursor = hasMore
+    ? (transactions[transactions.length - 1]?.id ?? null)
+    : null;
+
+  const data = transactions.map((t) => ({
+    ...t,
+    amount: Number(t.amount),
+    exchange_rate: Number(t.exchange_rate),
+    is_transfer: t.transfer_group_id !== null,
+  }));
+
+  return NextResponse.json({ data, nextCursor, hasMore });
 }
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session.userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+  const unauthorized = await requireApiAuth();
+  if (unauthorized) return unauthorized;
   try {
     const body = await request.json();
-    const data = CreateTransactionSchema.parse(body);
-
+    const data = createTransactionSchema.parse(body);
     const transaction = await prisma.transaction.create({
       data: {
         account_id: data.account_id,
@@ -50,18 +68,37 @@ export async function POST(request: Request) {
         currency: data.currency,
         exchange_rate: data.exchange_rate,
         type: data.type,
-        category_id: data.category_id,
-        date: new Date(data.date),
-        notes: data.notes,
+        category_id: data.category_id ?? null,
+        date: data.date,
+        notes: data.notes ?? null,
+      },
+      include: {
+        account: { select: { id: true, name: true, type: true } },
+        category: { select: { id: true, name: true, type: true } },
       },
     });
-
-    return NextResponse.json(transaction, { status: 201 });
+    return NextResponse.json(
+      {
+        data: {
+          ...transaction,
+          amount: Number(transaction.amount),
+          exchange_rate: Number(transaction.exchange_rate),
+          is_transfer: false,
+        },
+      },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ errors: error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: "Validation failed", details: error.issues },
+        { status: 400 },
+      );
     }
-    console.error('Create transaction error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error(error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

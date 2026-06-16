@@ -1,0 +1,88 @@
+# Cursor Rules — Financial Tracker
+
+## Project Overview
+
+Personal finance tracker: Next.js 16 App Router, TypeScript strict, PostgreSQL 16, Prisma 6, Tailwind v4, shadcn/ui, TanStack Query v5, Zustand.
+
+## Before Writing Code
+
+Always read these files first:
+- `GEMINI.md` — Complete build specification
+- `DESIGN.md` — Visual design system
+- `CLAUDE.md` — Additional coding rules
+
+## Core Architecture
+
+- **Accounting:** Double-entry via transaction rows. Balance always computed, never stored.
+- **Income/Expense:** Classified by `Category.type` (INCOME/EXPENSE/TRANSFER_FEE), not by transaction `type`.
+- **Transfers:** Two linked rows in `prisma.$transaction()`, shared `transfer_group_id`, excluded from P&L.
+- **Soft Delete:** `deleted_at` on all models. Prisma extension auto-filters. Never hard-delete.
+- **Auth:** iron-session encrypted cookie, argon2 passwords, single user.
+
+## File Conventions
+
+- Server Components by default. Add `'use client'` only for interactivity.
+- Colocate components near their page when used once. Shared → `src/components/shared/`.
+- API routes: `src/app/api/[resource]/route.ts` following the standard pattern (auth → Zod → Prisma → respond).
+- Service layer: `src/lib/services/[resource].ts` for complex business logic.
+- Hooks: `src/hooks/use-[resource].ts` wrapping TanStack Query.
+- Stores: `src/stores/[name]-store.ts` using Zustand.
+- Types: shared in `src/types/`, feature-specific colocated.
+
+## Code Patterns
+
+```typescript
+// API Route pattern (every route)
+export async function POST(request: Request) {
+  await requireAuth();
+  const body = await request.json();
+  const data = schema.parse(body);  // Zod before Prisma
+  const result = await prisma.model.create({ data });
+  return NextResponse.json({ data: result }, { status: 201 });
+}
+
+// Component pattern
+interface Props { /* typed props */ }
+export function ComponentName({ ...props }: Props) { /* ... */ }
+
+// Hook pattern
+export function useResource() {
+  return useQuery({ queryKey: ['resource'], queryFn: () => fetch('/api/resource').then(r => r.json()) });
+}
+```
+
+## Formatting
+
+- Currency: `formatIDR(amount)` → `Rp12.500` (no decimals for IDR)
+- Dates: `formatDate(date)` → `18 Apr 2026` (Jakarta timezone)
+- Short amounts: `formatIDRShort(amount)` → `15.0jt`, `500rb`
+- Class names: `cn('base', condition && 'modifier')` from `src/lib/utils.ts`
+
+## What NOT To Do
+
+- Don't add `balance` field to Account model
+- Don't install NextAuth, Supabase, Firebase, SQLite
+- Don't send raw transactions to LLM (summaries only)
+- Don't skip Zod validation
+- Don't create single-row transfers
+- Don't hard-delete anything
+- Don't use `any` type — use `unknown` and narrow
+
+## shadcn/ui
+
+Components installed via `npx shadcn@latest add [component]`. Don't manually copy component code.
+Custom components build on top of shadcn primitives.
+
+## Testing
+
+- Unit tests: Vitest for services, validators, utils
+- Integration: API route tests with test DB
+- E2E: Playwright for critical flows
+- A11y: axe-core in Playwright
+
+## Deployment
+
+- Docker on Oracle VPS
+- User manages reverse proxy (OpenResty) — don't generate proxy configs
+- PostgreSQL in Docker Compose
+- Prisma migrations run at deploy time

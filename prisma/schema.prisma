@@ -25,26 +25,35 @@ enum TransactionType {
   credit
 }
 
+enum CategoryType {
+  INCOME
+  EXPENSE
+  TRANSFER_FEE
+}
+
 model Account {
-  id             String          @id @default(uuid())
-  name           String
-  type           AccountType
-  normal_balance NormalBalance
-  currency       String          @default("IDR")
-  transactions   Transaction[]
-  created_at     DateTime        @default(now())
-  updated_at     DateTime        @updatedAt
-  deleted_at     DateTime?
+  id                    String                 @id @default(uuid())
+  name                  String                 @unique
+  type                  AccountType
+  normal_balance        NormalBalance
+  currency              String                 @default("IDR")
+  transactions          Transaction[]
+  recurringTransactions RecurringTransaction[]
+  created_at            DateTime               @default(now())
+  updated_at            DateTime               @updatedAt
+  deleted_at            DateTime?
 }
 
 model Category {
-  id                 String        @id @default(uuid())
-  name               String
-  parent_category_id String?
-  transactions       Transaction[]
-  budgets            Budget[]
-  created_at         DateTime      @default(now())
-  deleted_at         DateTime?
+  id                    String                 @id @default(uuid())
+  name                  String
+  type                  CategoryType           @default(EXPENSE)
+  parent_category_id    String?
+  transactions          Transaction[]
+  budgets               Budget[]
+  recurringTransactions RecurringTransaction[]
+  created_at            DateTime               @default(now())
+  deleted_at            DateTime?
 }
 
 model Transaction {
@@ -63,6 +72,12 @@ model Transaction {
   created_at        DateTime        @default(now())
   updated_at        DateTime        @updatedAt
   deleted_at        DateTime?
+
+  @@index([account_id])
+  @@index([category_id])
+  @@index([date])
+  @@index([transfer_group_id])
+  @@index([deleted_at])
 }
 
 model Budget {
@@ -85,4 +100,32 @@ model MonthlySummary {
   payload_json    Json
   ai_advice_given String?
   created_at      DateTime @default(now())
+}
+
+model Setting {
+  id         String   @id @default(uuid())
+  key        String   @unique
+  value      Json
+  updated_at DateTime @updatedAt
+}
+
+model RecurringTransaction {
+  id             String          @id @default(uuid())
+  name           String
+  account_id     String
+  amount         Decimal         @db.Decimal(12, 2)
+  currency       String          @default("IDR")
+  type           TransactionType
+  category_id    String?
+  notes          String?
+  frequency      String
+  day_of_month   Int?
+  last_generated DateTime?
+  next_due       DateTime
+  active         Boolean         @default(true)
+  account        Account         @relation(fields: [account_id], references: [id])
+  category       Category?       @relation(fields: [category_id], references: [id])
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+  deleted_at     DateTime?
 }
