@@ -1,5 +1,7 @@
 'use client';
 
+import { formatIDR } from '@/lib/utils';
+
 import {
   CartesianGrid,
   Legend,
@@ -37,7 +39,7 @@ export function TrendChart({ data }: TrendChartProps) {
         <YAxis tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}jt`} />
         <Tooltip
           formatter={(value) =>
-            new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
+            formatIDR(
               Number(value ?? 0)
             )
           }

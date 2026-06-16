@@ -1,5 +1,7 @@
 'use client';
 
+import { formatIDR } from '@/lib/utils';
+
 import {
   Bar,
   BarChart,
@@ -37,7 +39,7 @@ export function CategoryChart({ data }: CategoryChartProps) {
         <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
         <Tooltip
           formatter={(value) =>
-            new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(
+            formatIDR(
               Number(value ?? 0)
             )
           }
