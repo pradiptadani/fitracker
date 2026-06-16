@@ -14,10 +14,11 @@ function shiftMonth(monthStr: string, delta: number): string {
   return date.toISOString().slice(0, 7);
 }
 
+const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
 function formatMonthName(monthStr: string): string {
   const [year, month] = monthStr.split('-').map(Number);
   const date = new Date(year, month - 1, 1);
-  return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
+  return monthFormatter.format(date);
 }
 
 export function Header() {

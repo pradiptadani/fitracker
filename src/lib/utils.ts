@@ -5,13 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const idrFormatter = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 export function formatIDR(amount: number): string {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return idrFormatter.format(amount);
 }
 
 export function formatIDRShort(amount: number): string {
@@ -21,21 +23,25 @@ export function formatIDRShort(amount: number): string {
   return amount.toString();
 }
 
+const dateFormatter = new Intl.DateTimeFormat('id-ID', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'Asia/Jakarta',
+});
+
 export function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Asia/Jakarta',
-  }).format(new Date(date));
+  return dateFormatter.format(new Date(date));
 }
 
+const shortDateFormatter = new Intl.DateTimeFormat('id-ID', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'Asia/Jakarta',
+});
+
 export function formatShortDate(date: Date | string): string {
-  return new Intl.DateTimeFormat('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'Asia/Jakarta',
-  }).format(new Date(date));
+  return shortDateFormatter.format(new Date(date));
 }
 
 export function getCurrentMonth(): string {
