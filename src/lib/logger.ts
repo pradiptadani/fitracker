@@ -7,7 +7,8 @@ export const logger = {
       console.error(message, error);
     } else {
       // In production, log a minimal, safe version of the error
-      console.error(`[ERROR] ${message}`);
+      const safeErrorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[ERROR] ${message}: ${safeErrorMsg}`);
     }
   },
   warn: (message: string, data?: unknown) => {

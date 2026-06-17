@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireApiAuth } from "@/lib/auth";
 import { createTransferSchema } from "@/lib/validators";
 import { createTransfer } from "@/lib/services/transfers";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   const unauthorized = await requireApiAuth();
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    console.error(error);
+    logger.error("API Error", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

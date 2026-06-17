@@ -4,6 +4,7 @@ import { requireApiAuth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { categorizeTransaction } from "@/lib/ai/categorize";
 import prisma from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 const schema = z.object({
   transaction_id: z.string().uuid(),
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    console.error(error);
+    logger.error("API Error", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

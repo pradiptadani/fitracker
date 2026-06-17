@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth';
 import { getCashflow } from '@/lib/services/reports';
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const unauthorized = await requireApiAuth();
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
     const data = await getCashflow(Math.min(months, 24));
     return NextResponse.json({ data });
   } catch (error) {
-    console.error(error);
+    logger.error("API Error", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

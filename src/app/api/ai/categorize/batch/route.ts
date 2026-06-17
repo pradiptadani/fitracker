@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/ai/rate-limit';
-import { categorizeTransaction } from '@/lib/ai/categorize';
+import { categorizeTransactionsBatch } from '@/lib/ai/categorize';
 import prisma from '@/lib/prisma';
 
 export async function POST() {
@@ -23,22 +23,21 @@ export async function POST() {
 
   const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
 
-  const results = await Promise.all(
-    uncategorized.map(async (t) => {
-      const suggestion = await categorizeTransaction(
-        {
-          amount: Number(t.amount),
-          currency: t.currency,
-          date: t.date.toISOString().slice(0, 10),
-          notes: t.notes,
-          accountName: t.account.name,
-          accountType: t.account.type,
-        },
-        categories
-      );
-      return { transaction_id: t.id, suggestion };
-    })
-  );
+  const transactionInputs = uncategorized.map((t) => ({
+    amount: Number(t.amount),
+    currency: t.currency,
+    date: t.date.toISOString().slice(0, 10),
+    notes: t.notes,
+    accountName: t.account.name,
+    accountType: t.account.type,
+  }));
+
+  const suggestions = await categorizeTransactionsBatch(transactionInputs, categories);
+
+  const results = uncategorized.map((t, index) => ({
+    transaction_id: t.id,
+    suggestion: suggestions[index] || null,
+  }));
 
   return NextResponse.json({ data: results });
 }
