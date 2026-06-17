@@ -1,0 +1,44 @@
+name: CD
+
+# Deploy to the VPS after code lands on main (i.e. a PR was merged).
+# Runs on a self-hosted runner installed on the VPS, so it executes
+# scripts/deploy.sh locally — no SSH, no inbound ports, no secrets.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: cd-production       # never run two deploys at once
+  cancel-in-progress: false  # let an in-flight deploy finish
+
+jobs:
+  # Re-run the same gates on the merged main commit before shipping.
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npx vitest run tests/unit
+
+  deploy:
+    name: Deploy to VPS
+    needs: [verify]
+    runs-on: [self-hosted, fitracker]   # the runner on the VPS
+    steps:
+      - uses: actions/checkout@v4
+      # The runner's working dir is a fresh checkout; deploy the real
+      # working tree at /home/pradipta/web/fitracker via its own script.
+      - name: Run deploy script
+        run: |
+          cd /home/pradipta/web/fitracker
+          git fetch origin main
+          git reset --hard origin/main
+          ./scripts/deploy.sh --migrate

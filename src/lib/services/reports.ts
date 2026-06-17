@@ -56,7 +56,7 @@ export async function getCategoryBreakdown(
     WHERE t.deleted_at IS NULL
       AND a.deleted_at IS NULL
       AND t.transfer_group_id IS NULL
-      AND c.type = ${categoryType}
+      AND c.type = ${categoryType}::"CategoryType"
       AND t.date >= ${period.start}
       AND t.date < ${period.end}
     GROUP BY c.id, c.name
