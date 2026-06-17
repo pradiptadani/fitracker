@@ -3,6 +3,7 @@ import { z } from 'zod';
 import argon2 from 'argon2';
 import { getSession } from '@/lib/session';
 import { checkLoginRateLimit } from '@/lib/auth-rate-limit';
+import { logger } from "@/lib/logger";
 
 const LoginSchema = z.object({
   email: z.string().email(),
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ errors: error.issues }, { status: 400 });
     }
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

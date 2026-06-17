@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiAuth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 const schema = z.object({ category_id: z.string().uuid() });
 
@@ -29,7 +30,7 @@ export async function POST(
         { status: 400 },
       );
     }
-    console.error(error);
+    logger.error("API Error", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

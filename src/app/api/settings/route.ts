@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiAuth } from "@/lib/auth";
 import { getAllSettings, setSetting } from "@/lib/services/settings";
+import { logger } from "@/lib/logger";
 
 const schema = z.object({
   key: z.string().min(1),
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    console.error(error);
+    logger.error("API Error", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

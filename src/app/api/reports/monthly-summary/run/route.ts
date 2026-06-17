@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/auth';
 import { runMonthlySummary } from '@/lib/services/monthly-summary';
 import { getCurrentMonth } from '@/lib/utils';
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   const unauthorized = await requireApiAuth();
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
     const result = await runMonthlySummary(month);
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (error) {
-    console.error(error);
+    logger.error("API Error", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

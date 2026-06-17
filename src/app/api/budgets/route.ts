@@ -3,6 +3,7 @@ import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { requireApiAuth } from "@/lib/auth";
 import { createBudgetSchema } from "@/lib/validators";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   const unauthorized = await requireApiAuth();
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    console.error(error);
+    logger.error("API Error", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

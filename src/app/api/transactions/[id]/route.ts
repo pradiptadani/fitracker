@@ -3,6 +3,7 @@ import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { requireApiAuth } from "@/lib/auth";
 import { updateTransactionSchema } from "@/lib/validators";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   _req: Request,
@@ -66,7 +67,7 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    console.error(error);
+    logger.error("API Error", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

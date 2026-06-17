@@ -4,6 +4,7 @@ import { requireApiAuth } from "@/lib/auth";
 import { emailParseSchema } from "@/lib/validators";
 import { parseEmailSnippet } from "@/lib/email/parser";
 import { isDuplicateEmail } from "@/lib/email/dedup";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   const unauthorized = await requireApiAuth();
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    console.error(error);
+    logger.error("API Error", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },
