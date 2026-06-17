@@ -1,5 +1,7 @@
+# Security Log
 
-## 2024-05-24 - [Login Brute Force Vulnerability]
-**Vulnerability:** Found a lack of rate limiting on the `/api/auth/login` endpoint, enabling attackers to make unlimited login attempts and perform brute force attacks to guess user passwords and potentially perform a Denial of Service attack via resource exhaustion since Argon2 hashing is expensive.
-**Learning:** Even internal-only or single-user applications can suffer severe resource exhaustion via unauthenticated paths due to the intentional high computation cost of secure password hashing algorithms like Argon2. A lack of rate limiting acts as a force multiplier for DoS attacks.
-**Prevention:** Always implement rate limiting on authentication routes as a fundamental defense-in-depth measure, independent of the intended user base size or current API structure.
+## 2024-xx-xx: Prevent Sensitive Data Exposure in API Routes
+
+**Vulnerability:** Raw `console.error` calls in catch blocks can inadvertently expose sensitive data (e.g., database stack traces, internal paths) to logging systems, which might have broader access than intended.
+
+**Fix:** Created an environment-aware logger (`src/lib/logger.ts`) that suppresses the `error` object in non-development environments, only logging the descriptive message. Replaced raw `console.error` calls with this new `logger.error` abstraction.
